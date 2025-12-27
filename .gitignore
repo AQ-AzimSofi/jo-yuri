@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+ENV/
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+
+# Data (keep structure, ignore contents)
+backend/data/images/*
+backend/data/reference/*
+!backend/data/images/.gitkeep
+!backend/data/reference/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ML models (downloaded at runtime)
+*.pt
+*.pth
+*.onnx
+
+# Node (frontend)
+node_modules/
+.next/
+out/
+
+# Misc
+*.log
+.cache/
+.history/
