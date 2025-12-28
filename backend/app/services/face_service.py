@@ -43,7 +43,6 @@ class FaceService:
             self._reference_encodings.append(encodings[0])
             self._save_encodings()
 
-            # Also save the reference image
             settings.reference_dir.mkdir(parents=True, exist_ok=True)
             ref_path = settings.reference_dir / f"ref_{len(self._reference_encodings)}.jpg"
             ref_path.write_bytes(content)
@@ -81,12 +80,11 @@ class FaceService:
         is_joyuri = False
 
         for encoding in face_encodings:
-            # Compare against all reference encodings
             distances = face_recognition.face_distance(
                 self._reference_encodings, encoding
             )
             min_distance = min(distances)
-            confidence = 1 - min_distance  # Convert distance to similarity
+            confidence = 1 - min_distance
 
             if confidence > best_confidence:
                 best_confidence = confidence

@@ -40,13 +40,12 @@ class PinterestScraper:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
-            page.set_default_timeout(60000)  # 60s timeout
+            page.set_default_timeout(60000)
 
             await page.goto(board_url, wait_until="domcontentloaded")
-            await asyncio.sleep(3)  # Wait for images to load
+            await asyncio.sleep(3)
 
             while len(downloaded) < max_images:
-                # Extract image URLs
                 images = await page.query_selector_all('img[src*="pinimg.com"]')
 
                 for img in images:
@@ -57,21 +56,17 @@ class PinterestScraper:
                     if not src or src in seen_urls:
                         continue
 
-                    # Get highest resolution version
                     high_res_url = self._get_high_res_url(src)
                     seen_urls.add(src)
 
-                    # Download image
                     path = await self._download_image(high_res_url)
                     if path:
                         downloaded.append(path)
                         print(f"Downloaded {len(downloaded)}/{max_images}: {path.name}")
 
-                # Scroll down to load more
                 await page.evaluate("window.scrollBy(0, 1000)")
                 await asyncio.sleep(scroll_delay)
 
-                # Check if we've reached the end
                 new_height = await page.evaluate("document.body.scrollHeight")
                 if len(images) == 0:
                     break
@@ -100,7 +95,6 @@ class PinterestScraper:
 
     def _get_high_res_url(self, url: str) -> str:
         """Convert thumbnail URL to high-res version."""
-        # Pinterest URL patterns: /236x/, /474x/, /736x/, /originals/
         for size in ["/236x/", "/474x/", "/736x/"]:
             if size in url:
                 return url.replace(size, "/originals/")
@@ -123,12 +117,10 @@ class PinterestScraper:
 
                 content = response.content
 
-                # Skip tiny images (likely broken/placeholders)
                 if len(content) < min_size:
                     print(f"Skipping {url}: too small ({len(content)} bytes)")
                     return None
 
-                # Generate filename from URL hash
                 url_hash = hashlib.md5(url.encode()).hexdigest()[:12]
                 ext = self._get_extension(response.headers.get("content-type", ""))
                 filename = f"{url_hash}{ext}"
@@ -139,7 +131,6 @@ class PinterestScraper:
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 403 and "/originals/" in url:
-                # Fallback to 736x resolution
                 fallback = self._get_fallback_url(url)
                 return await self._download_image(fallback, original_url=url)
             print(f"Failed to download {url}: {e}")

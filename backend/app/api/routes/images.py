@@ -1,4 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi.responses import FileResponse
 from app.models.schemas import ImageUploadResponse
 from app.services.clip_service import clip_service
 from app.services.vector_store import vector_store
@@ -7,6 +8,15 @@ import uuid
 from pathlib import Path
 
 router = APIRouter()
+
+
+@router.get("/file/{filename}")
+async def get_image(filename: str):
+    """Serve an image file."""
+    file_path = settings.images_dir / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(file_path)
 
 
 @router.post("/upload", response_model=ImageUploadResponse)
@@ -19,12 +29,10 @@ async def upload_image(file: UploadFile = File(...)):
     filename = f"{image_id}_{file.filename}"
     file_path = settings.images_dir / filename
 
-    # Save image
     settings.images_dir.mkdir(parents=True, exist_ok=True)
     content = await file.read()
     file_path.write_bytes(content)
 
-    # Generate CLIP embedding and store
     embedding = clip_service.get_image_embedding(file_path)
     vector_store.upsert(
         id=image_id,

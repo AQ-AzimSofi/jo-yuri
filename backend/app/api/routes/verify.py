@@ -16,7 +16,6 @@ async def verify_joyuri(
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
 
-    # Save to temp file for processing
     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
         content = await file.read()
         tmp.write(content)
@@ -26,7 +25,7 @@ async def verify_joyuri(
         result = face_service.verify(tmp_path, threshold=threshold)
         return VerifyResponse(**result)
     finally:
-        tmp_path.unlink()  # Cleanup
+        tmp_path.unlink()
 
 
 @router.post("/add-reference")

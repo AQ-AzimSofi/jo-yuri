@@ -5,7 +5,6 @@ Batch index images with CLIP embeddings into Qdrant.
 import sys
 from pathlib import Path
 
-# Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.services.clip_service import clip_service
