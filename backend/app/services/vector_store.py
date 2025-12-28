@@ -47,9 +47,9 @@ class VectorStore:
     def search(self, vector: list[float], limit: int = 10) -> list[dict]:
         """Search for similar vectors."""
         client = self._get_client()
-        results = client.search(
+        results = client.query_points(
             collection_name=self._collection,
-            query_vector=vector,
+            query=vector,
             limit=limit,
         )
         return [
@@ -58,7 +58,7 @@ class VectorStore:
                 "score": r.score,
                 "payload": r.payload,
             }
-            for r in results
+            for r in results.points
         ]
 
     def list_all(self) -> list[dict]:
