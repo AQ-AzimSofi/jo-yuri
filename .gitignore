@@ -46,3 +46,6 @@ out/
 *.log
 .cache/
 .history/
+CLAUDE.md
+saved_convos/
+*.tsbuildinfo
