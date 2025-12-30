@@ -24,9 +24,9 @@ export function ImageGrid({ images }: ImageGridProps) {
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {images.map((image, index) => (
+        {images.map((image) => (
           <div
-            key={index}
+            key={image.filename}
             className="relative group cursor-pointer rounded-lg overflow-hidden bg-gray-100 aspect-square"
             onClick={() => setSelectedImage(image)}
           >
