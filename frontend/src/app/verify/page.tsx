@@ -89,6 +89,7 @@ export default function VerifyPage() {
             if (f) handleFile(f);
           }}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          suppressHydrationWarning
         />
       </div>
 
