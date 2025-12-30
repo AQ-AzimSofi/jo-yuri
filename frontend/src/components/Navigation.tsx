@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/", label: "Search" },
@@ -11,6 +12,11 @@ const navItems = [
 
 export function Navigation() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <nav className="bg-white shadow-sm border-b">
@@ -25,7 +31,7 @@ export function Navigation() {
                 key={item.href}
                 href={item.href}
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  pathname === item.href
+                  mounted && pathname === item.href
                     ? "bg-purple-100 text-purple-700"
                     : "text-gray-600 hover:bg-gray-100"
                 }`}
