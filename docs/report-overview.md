@@ -5,6 +5,39 @@ This document provides a deep technical analysis of the Jo Yuri Image Recognitio
 
 ---
 
+## Quick Reference
+
+### Development Commands
+
+**Backend (FastAPI)**
+```bash
+cd backend
+source venv/bin/activate
+uvicorn app.main:app --reload                              # Dev server on :8000
+python -m scripts.scraper.pinterest "URL" --max 50         # Scrape Pinterest board
+python -m scripts.scraper.pinterest "jo yuri" --search --max 50  # Scrape by search query
+python scripts/index_images.py                             # Index images into Qdrant
+playwright install chromium                                # Required before scraping
+```
+
+**Frontend (Next.js 15 + React 19)**
+```bash
+cd frontend
+npm run dev      # Dev server on :3000
+npm run build    # Production build
+npm run lint     # ESLint
+```
+
+**Infrastructure (Docker)**
+```bash
+docker-compose up -d qdrant    # Start Qdrant only (for local dev)
+docker-compose up -d           # Start all services (Qdrant + backend on :8421)
+```
+
+> **Note:** Backend runs on host port **8421** (maps to container 8000). First API request triggers CLIP model download (~338MB).
+
+---
+
 ## 1. Technical Architecture & Code Flow
 
 ### 1.1 System Overview
@@ -138,7 +171,7 @@ Services (Singleton Pattern)
 |-------------|---------|---------|
 | `backend/app/main.py:1` | FastAPI app bootstrap | `uvicorn app.main:app` |
 | `backend/scripts/index_images.py:44` | Batch indexing CLI | `python scripts/index_images.py` |
-| `backend/scripts/scraper/pinterest.py:174` | Image scraper CLI | `python -m scripts.scraper.pinterest` |
+| `backend/scripts/scraper/pinterest.py:174` | Image scraper CLI | `python -m scripts.scraper.pinterest URL` or `--search "query"` |
 | `frontend/src/app/page.tsx:7` | Search page component | Browser navigation to `/` |
 
 ---
@@ -486,4 +519,4 @@ The suggested extensions focus on demonstrating senior-level capabilities: evalu
 
 ---
 
-*Generated: 2025-12-30*
+*Generated: 2025-12-30 | Updated: 2026-01-01*
