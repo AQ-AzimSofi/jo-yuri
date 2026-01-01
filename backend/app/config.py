@@ -12,8 +12,10 @@ class Settings(BaseSettings):
     images_dir: Path = Path("data/images")
     reference_dir: Path = Path("data/reference")
 
-    # CLIP
-    clip_model: str = "ViT-B/32"
+    # CLIP (multi-model support)
+    default_clip_model: str = "openai/ViT-B-32"
+    clip_models_cache_dir: Path = Path("data/models")
+    max_loaded_models: int = 2
 
     # Face recognition
     face_recognition_tolerance: float = 0.6
