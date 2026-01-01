@@ -6,6 +6,8 @@ python-multipart==0.0.20
 # ML / Embeddings
 torch==2.5.1
 clip @ git+https://github.com/openai/CLIP.git
+open-clip-torch==2.24.0
+transformers>=4.37.0
 Pillow==11.0.0
 
 # Face recognition
