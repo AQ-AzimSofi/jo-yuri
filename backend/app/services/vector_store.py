@@ -1,13 +1,13 @@
+from typing import Optional
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 from app.config import settings
+from app.models.clip_models import MODEL_REGISTRY, get_collection_name
 
 
 class VectorStore:
     def __init__(self):
-        self._client = None
-        self._collection = settings.qdrant_collection
-        self._vector_size = 512  # CLIP ViT-B/32 embedding size
+        self._client: Optional[QdrantClient] = None
 
     def _get_client(self) -> QdrantClient:
         if self._client is None:
@@ -15,74 +15,108 @@ class VectorStore:
                 host=settings.qdrant_host,
                 port=settings.qdrant_port,
             )
-            self._ensure_collection()
         return self._client
 
-    def _ensure_collection(self):
-        """Create collection if it doesn't exist."""
-        collections = self._client.get_collections().collections
-        if not any(c.name == self._collection for c in collections):
-            self._client.create_collection(
-                collection_name=self._collection,
+    def ensure_collection(self, model_id: str) -> str:
+        client = self._get_client()
+        collection_name = get_collection_name(model_id)
+        vector_size = MODEL_REGISTRY[model_id].vector_dim
+
+        collections = client.get_collections().collections
+        if not any(c.name == collection_name for c in collections):
+            client.create_collection(
+                collection_name=collection_name,
                 vectors_config=VectorParams(
-                    size=self._vector_size,
+                    size=vector_size,
                     distance=Distance.COSINE,
                 ),
             )
+        return collection_name
 
-    def upsert(self, id: str, vector: list[float], payload: dict):
-        """Insert or update a vector."""
+    def get_collection_info(self, model_id: str) -> Optional[dict]:
         client = self._get_client()
+        collection_name = get_collection_name(model_id)
+        try:
+            info = client.get_collection(collection_name)
+            return {
+                "name": collection_name,
+                "points_count": info.points_count,
+                "vector_dim": MODEL_REGISTRY[model_id].vector_dim,
+            }
+        except Exception:
+            return None
+
+    def list_indexed_models(self) -> list[dict]:
+        client = self._get_client()
+        collections = client.get_collections().collections
+        collection_names = {c.name for c in collections}
+
+        indexed = []
+        for model_id in MODEL_REGISTRY:
+            collection_name = get_collection_name(model_id)
+            if collection_name in collection_names:
+                try:
+                    info = client.get_collection(collection_name)
+                    indexed.append({
+                        "model_id": model_id,
+                        "collection": collection_name,
+                        "points_count": info.points_count,
+                        "vector_dim": MODEL_REGISTRY[model_id].vector_dim,
+                    })
+                except Exception:
+                    pass
+        return indexed
+
+    def upsert(self, model_id: str, id: str, vector: list[float], payload: dict) -> None:
+        client = self._get_client()
+        collection_name = self.ensure_collection(model_id)
         client.upsert(
-            collection_name=self._collection,
-            points=[
-                PointStruct(
-                    id=id,
-                    vector=vector,
-                    payload=payload,
-                )
-            ],
+            collection_name=collection_name,
+            points=[PointStruct(id=id, vector=vector, payload=payload)],
         )
 
-    def search(self, vector: list[float], limit: int = 10) -> list[dict]:
-        """Search for similar vectors."""
+    def search(self, model_id: str, vector: list[float], limit: int = 10) -> list[dict]:
         client = self._get_client()
-        results = client.query_points(
-            collection_name=self._collection,
-            query=vector,
-            limit=limit,
-        )
-        return [
-            {
-                "id": str(r.id),
-                "score": r.score,
-                "payload": r.payload,
-            }
-            for r in results.points
-        ]
+        collection_name = get_collection_name(model_id)
 
-    def list_all(self) -> list[dict]:
-        """List all indexed images."""
-        client = self._get_client()
-        results = client.scroll(
-            collection_name=self._collection,
-            limit=1000,
-        )
-        return [
-            {
-                "id": str(r.id),
-                "payload": r.payload,
-            }
-            for r in results[0]
-        ]
+        try:
+            results = client.query_points(
+                collection_name=collection_name,
+                query=vector,
+                limit=limit,
+            )
+            return [
+                {"id": str(r.id), "score": r.score, "payload": r.payload}
+                for r in results.points
+            ]
+        except Exception:
+            return []
 
-    def delete(self, id: str):
-        """Delete a vector by ID."""
+    def list_all(self, model_id: str) -> list[dict]:
         client = self._get_client()
+        collection_name = get_collection_name(model_id)
+
+        try:
+            results = client.scroll(collection_name=collection_name, limit=1000)
+            return [{"id": str(r.id), "payload": r.payload} for r in results[0]]
+        except Exception:
+            return []
+
+    def delete(self, model_id: str, id: str) -> None:
+        client = self._get_client()
+        collection_name = get_collection_name(model_id)
         client.delete(
-            collection_name=self._collection,
+            collection_name=collection_name,
             points_selector=[id],
         )
+
+    def delete_collection(self, model_id: str) -> None:
+        client = self._get_client()
+        collection_name = get_collection_name(model_id)
+        try:
+            client.delete_collection(collection_name)
+        except Exception:
+            pass
 
 
 vector_store = VectorStore()
