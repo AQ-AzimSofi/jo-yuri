@@ -1,14 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { searchImages, getImageUrl, type SearchResult } from "@/lib/api";
+import { useState, useCallback } from "react";
+import { searchImages, getImageUrl, listModels, type SearchResult } from "@/lib/api";
 import { ImageGrid } from "@/components/ImageGrid";
+import { ModelSelector } from "@/components/ModelSelector";
+import { IndexingProgress } from "@/components/IndexingProgress";
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [currentModel, setCurrentModel] = useState<string>("");
+  const [indexingModel, setIndexingModel] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,7 +23,7 @@ export default function SearchPage() {
 
     setLoading(true);
     try {
-      const response = await searchImages(query);
+      const response = await searchImages(query, 12, currentModel || undefined);
       setResults(response.results);
       setSearched(true);
     } catch (error) {
@@ -25,6 +32,35 @@ export default function SearchPage() {
       setLoading(false);
     }
   };
+
+  const handleModelChange = useCallback(
+    (modelId: string) => {
+      setCurrentModel(modelId);
+      if (searched && query.trim()) {
+        setLoading(true);
+        searchImages(query, 12, modelId)
+          .then((response) => setResults(response.results))
+          .catch((error) => console.error("Search failed:", error))
+          .finally(() => setLoading(false));
+      }
+    },
+    [searched, query]
+  );
+
+  const handleIndexRequest = useCallback((modelId: string, modelName: string) => {
+    setIndexingModel({ id: modelId, name: modelName });
+  }, []);
+
+  const handleIndexComplete = useCallback(async () => {
+    await listModels();
+    if (searched && query.trim() && indexingModel) {
+      setLoading(true);
+      searchImages(query, 12, indexingModel.id)
+        .then((response) => setResults(response.results))
+        .catch((error) => console.error("Search failed:", error))
+        .finally(() => setLoading(false));
+    }
+  }, [searched, query, indexingModel]);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -38,7 +74,7 @@ export default function SearchPage() {
       </div>
 
       <form onSubmit={handleSearch} className="mb-8">
-        <div className="flex gap-2 max-w-2xl mx-auto">
+        <div className="flex gap-2 max-w-3xl mx-auto">
           <input
             type="text"
             value={query}
@@ -46,6 +82,10 @@ export default function SearchPage() {
             placeholder="Enter search query..."
             className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             suppressHydrationWarning
+          />
+          <ModelSelector
+            onModelChange={handleModelChange}
+            onIndexRequest={handleIndexRequest}
           />
           <button
             type="submit"
@@ -70,6 +110,15 @@ export default function SearchPage() {
             }))}
           />
         </div>
+      )}
+
+      {indexingModel && (
+        <IndexingProgress
+          modelId={indexingModel.id}
+          modelName={indexingModel.name}
+          onComplete={handleIndexComplete}
+          onClose={() => setIndexingModel(null)}
+        />
       )}
     </div>
   );
