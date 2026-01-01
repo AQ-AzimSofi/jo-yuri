@@ -5,14 +5,12 @@ from app.services.clip_service import clip_service
 from app.services.vector_store import vector_store
 from app.config import settings
 import uuid
-from pathlib import Path
 
 router = APIRouter()
 
 
 @router.get("/file/{filename}")
 async def get_image(filename: str):
-    """Serve an image file."""
     file_path = settings.images_dir / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
@@ -21,9 +19,10 @@ async def get_image(filename: str):
 
 @router.post("/upload", response_model=ImageUploadResponse)
 async def upload_image(file: UploadFile = File(...)):
-    """Upload an image and index it with CLIP embeddings."""
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
+
+    model_id = clip_service.get_current_model_id()
 
     image_id = str(uuid.uuid4())
     filename = f"{image_id}_{file.filename}"
@@ -33,8 +32,9 @@ async def upload_image(file: UploadFile = File(...)):
     content = await file.read()
     file_path.write_bytes(content)
 
-    embedding = clip_service.get_image_embedding(file_path)
+    embedding = clip_service.get_image_embedding(file_path, model_id)
     vector_store.upsert(
+        model_id=model_id,
         id=image_id,
         vector=embedding,
         payload={"filename": filename, "path": str(file_path)},
@@ -49,12 +49,12 @@ async def upload_image(file: UploadFile = File(...)):
 
 @router.get("/")
 async def list_images():
-    """List all indexed images."""
-    return vector_store.list_all()
+    model_id = clip_service.get_current_model_id()
+    return vector_store.list_all(model_id)
 
 
 @router.delete("/{image_id}")
 async def delete_image(image_id: str):
-    """Delete an image from the index."""
-    vector_store.delete(image_id)
+    model_id = clip_service.get_current_model_id()
+    vector_store.delete(model_id, image_id)
     return {"message": f"Image {image_id} deleted"}

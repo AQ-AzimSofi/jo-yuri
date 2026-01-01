@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import search, verify, images
+from app.api.routes import search, verify, images, models
 
 app = FastAPI(
     title="Jo Yuri Image Recognition",
@@ -20,6 +20,7 @@ app.add_middleware(
 app.include_router(images.router, prefix="/api/images", tags=["images"])
 app.include_router(search.router, prefix="/api/search", tags=["search"])
 app.include_router(verify.router, prefix="/api/verify", tags=["verify"])
+app.include_router(models.router, prefix="/api/models", tags=["models"])
 
 
 @app.get("/health")
